@@ -210,7 +210,16 @@ async function loadData(){
       if(data.calcData){
         months.forEach(m=>{
           if(data.calcData[m]){
-            Object.assign(calcData[m],data.calcData[m]);
+            const saved=data.calcData[m];
+            // restore into calcData object
+            calcData[m]={
+              gross:  saved.gross  !=null?saved.gross  :null,
+              ded:    saved.ded    !=null?saved.ded    :null,
+              ni:     saved.ni     !=null?saved.ni     :null,
+              pension:saved.pension!=null?saved.pension:null,
+              work:   saved.work   !=null?saved.work   :null,
+              recovery:saved.recovery!=null?saved.recovery:null
+            };
           }
         });
       }
@@ -225,7 +234,7 @@ async function loadData(){
 
 function collectData(){
   const keys=['natwest','rentPay','sanket','actual','rentPaid','recovery'];
-  const out={carry_fwd:parseFloat(document.getElementById('carry_fwd').value)||null,calcData};
+  const out={carry_fwd:parseFloat(document.getElementById('carry_fwd').value)||null,calcData:JSON.parse(JSON.stringify(calcData))};
   keys.forEach(k=>{
     out[k]=months.map((_,i)=>{
       const v=parseFloat(document.getElementById(k+'_'+i)?.value);
@@ -378,13 +387,21 @@ function applyToMonth(){
   if(!sel){alert('Please select a month.');return;}
   const idx=months.indexOf(sel);
   if(idx<0)return;
-  const sanket=parseFloat(document.getElementById('p_sanket').textContent.replace('£',''))||0;
-  const rec=parseFloat(document.getElementById('p_recovery').value)||0;
+  const g=parseFloat(document.getElementById('p_gross').value)||null;
+  const d=parseFloat(document.getElementById('p_ded').value)||null;
+  const n=parseFloat(document.getElementById('p_ni').value)||null;
+  const p=parseFloat(document.getElementById('p_pension').value)||null;
+  const w=parseFloat(document.getElementById('p_work').value)||null;
+  const rec=parseFloat(document.getElementById('p_recovery').value)||null;
+  const total=(g||0)+(d||0)+(n||0)+(p||0);
+  const sanket=total>0&&w!=null?Math.max(0,total-w):0;
+  // save full calcData for this month
+  calcData[sel]={gross:g,ded:d,ni:n,pension:p,work:w,recovery:rec};
+  // push into main tables
   const si=document.getElementById('sanket_'+idx);
   const ri=document.getElementById('recovery_'+idx);
   if(si)si.value=sanket.toFixed(2);
-  if(ri)ri.value=rec.toFixed(2);
-  calcData[sel].recovery=rec||null;
+  if(ri&&rec!=null)ri.value=rec.toFixed(2);
   updateBreakdown();
   scheduleSave();
 }
