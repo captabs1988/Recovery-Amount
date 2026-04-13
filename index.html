@@ -1,78 +1,32 @@
-<h2 class="sr-only">Finance Tracker 2026 — Liabilities, Assets and Cost Calculator</h2>
+<h2 class="sr-only">Finance Tracker 2026 — Liabilities, Assets and Cost Calculator with Supabase sync</h2>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);padding:1rem}
-h1{font-size:18px;font-weight:500;margin-bottom:1.25rem}
-
+h1{font-size:18px;font-weight:500;margin-bottom:.5rem}
+.sync-bar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:11px;color:#666}
+.dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0}
+.dot.ok{background:#1D9E75}.dot.saving{background:#E9A800}.dot.err{background:#A32D2D}
 .outer{display:grid;grid-template-columns:1fr 1fr 310px;gap:12px;margin-bottom:12px;align-items:start}
-
-/* Panel wrapper */
 .panel{border:1px solid #aaa;border-radius:6px;overflow:hidden}
 .panel-header{padding:6px 10px;font-size:11px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;color:#fff}
-.liab-header{background:#A32D2D}
-.asset-header{background:#0F6E56}
-.pay-header{background:#185FA5}
-
-/* Excel-style ledger table */
+.liab-header{background:#A32D2D}.asset-header{background:#0F6E56}.pay-header{background:#185FA5}
 table.ledger{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
 table.ledger col.c-month{width:38px}
-table.ledger col.c-data{width:auto}
-
 table.ledger thead tr{background:#D9D9D9}
-table.ledger thead th{
-  padding:5px 6px;
-  border:1px solid #aaa;
-  font-size:11px;font-weight:600;
-  color:#222;
-  text-align:center;
-  white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis
-}
-
-/* Alternating row stripes */
-table.ledger tbody tr.row-odd  td{background:#FFFFFF}
+table.ledger thead th{padding:5px 6px;border:1px solid #aaa;font-size:11px;font-weight:600;color:#222;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.ledger tbody tr.row-odd td{background:#FFFFFF}
 table.ledger tbody tr.row-even td{background:#F2F2F2}
-
-table.ledger tbody td{
-  border:1px solid #bbb;
-  padding:2px 4px;
-  vertical-align:middle
-}
-table.ledger tbody td.month{
-  font-size:11px;font-weight:600;color:#444;
-  text-align:center;
-  background:#E8E8E8;
-  border-right:1px solid #999
-}
-table.ledger tbody tr.section-row td{
-  background:#E2E2E2;
-  font-size:11px;font-weight:600;
-  color:#333;
-  padding:3px 6px;
-  border:1px solid #aaa
-}
-table.ledger tbody tr.carry-row td{
-  background:#FFF9E6;
-  border:1px solid #bbb
-}
-
-input[type=number]{
-  width:100%;height:24px;font-size:12px;
-  padding:0 4px;
-  border:none;
-  background:transparent;
-  color:var(--color-text-primary);
-  -moz-appearance:textfield;
-  text-align:right
-}
+table.ledger tbody td{border:1px solid #bbb;padding:2px 4px;vertical-align:middle}
+table.ledger tbody td.month{font-size:11px;font-weight:600;color:#444;text-align:center;background:#E8E8E8;border-right:1px solid #999}
+table.ledger tbody tr.section-row td{background:#E2E2E2;font-size:11px;font-weight:600;color:#333;padding:3px 6px;border:1px solid #aaa}
+table.ledger tbody tr.carry-row td{background:#FFF9E6;border:1px solid #bbb}
+input[type=number]{width:100%;height:24px;font-size:12px;padding:0 4px;border:none;background:transparent;color:var(--color-text-primary);-moz-appearance:textfield;text-align:right}
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 input[type=number]:focus{outline:1px solid #378ADD;background:#EAF3FB}
-
-/* Payslip panel */
 .pay-body{padding:.65rem .75rem;background:var(--color-background-primary)}
 .pay-field{margin-bottom:.5rem}
 .pay-field label{font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px}
-.pay-field input{border:1px solid #bbb;border-radius:4px;text-align:left;height:26px;background:var(--color-background-secondary)}
+.pay-field input{border:1px solid #bbb;border-radius:4px;text-align:left;height:26px;background:var(--color-background-secondary);width:100%}
 .pay-field input:focus{outline:1px solid #378ADD;background:#EAF3FB}
 .divider{border:none;border-top:1px solid #ccc;margin:.55rem 0}
 .result-row{display:flex;justify-content:space-between;align-items:center;background:#F2F2F2;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin-bottom:.45rem}
@@ -85,8 +39,6 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
 .month-sel-row{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:.6rem}
 .ms-label{font-size:10px;color:#555;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
 .note{font-size:10px;color:#888;margin-top:.35rem;line-height:1.5}
-
-/* Totals */
 .totals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .total-card{background:#fff;border:1px solid #aaa;border-radius:6px;padding:.65rem 1rem;text-align:center}
 .total-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}
@@ -95,48 +47,41 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
 </style>
 
 <h1>Year 2026</h1>
-<div class="outer">
+<div class="sync-bar"><div class="dot" id="sync-dot"></div><span id="sync-msg">Connecting to database...</span></div>
 
-  <!-- LIABILITIES -->
+<div class="outer">
   <div class="panel">
     <div class="panel-header liab-header">Liabilities</div>
     <table class="ledger">
-      <colgroup><col class="c-month"><col class="c-data"><col class="c-data"><col class="c-data"></colgroup>
+      <colgroup><col class="c-month"><col><col><col></colgroup>
       <thead><tr><th>Mo.</th><th>Natwest £</th><th>Rent payable £</th><th>Sanket diff £</th></tr></thead>
       <tbody>
         <tr class="section-row"><td colspan="4">Carry forward 2025</td></tr>
-        <tr class="carry-row">
-          <td class="month">—</td>
-          <td colspan="3"><input type="number" id="carry_fwd" value="1438.40" step="0.01" oninput="calc()"></td>
-        </tr>
+        <tr class="carry-row"><td class="month">—</td><td colspan="3"><input type="number" id="carry_fwd" value="1438.40" step="0.01" oninput="scheduleSave()"></td></tr>
         <tr class="section-row"><td colspan="4">Monthly</td></tr>
         <tbody id="liab-body"></tbody>
       </tbody>
     </table>
   </div>
 
-  <!-- ASSETS -->
   <div class="panel">
     <div class="panel-header asset-header">Assets</div>
     <table class="ledger">
-      <colgroup><col class="c-month"><col class="c-data"><col class="c-data"><col class="c-data"></colgroup>
+      <colgroup><col class="c-month"><col><col><col></colgroup>
       <thead><tr><th>Mo.</th><th>Actual work done £</th><th>Rent paid £</th><th>Recovery paid £</th></tr></thead>
       <tbody id="asset-body"></tbody>
     </table>
   </div>
 
-  <!-- CALCULATOR -->
   <div class="panel">
     <div class="panel-header pay-header">Monthly cost calculator</div>
     <div class="pay-body">
-      <div class="month-sel-row">
-        <span class="ms-label">Month</span>
+      <div class="month-sel-row"><span class="ms-label">Month</span>
         <select id="pay-month">
           <option value="">— select —</option>
-          <option>Jan</option><option>Feb</option><option>Mar</option>
-          <option>Apr</option><option>May</option><option>Jun</option>
-          <option>Jul</option><option>Aug</option><option>Sep</option>
-          <option>Oct</option><option>Nov</option><option>Dec</option>
+          <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option>
+          <option>May</option><option>Jun</option><option>Jul</option><option>Aug</option>
+          <option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
         </select>
       </div>
       <div class="pay-field"><label>Payment £</label><input type="number" id="p_gross" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
@@ -150,13 +95,11 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
       <hr class="divider">
       <div class="pay-field"><label>Total recovery paid £</label><input type="number" id="p_recovery" step="0.01" placeholder="0.00"></div>
       <button class="apply-btn" onclick="applyToMonth()">Apply to selected month ↗</button>
-      <p class="note">Pushes Sanket diff + Recovery paid into the chosen month row.</p>
+      <p class="note">Pushes Sanket diff + Recovery paid into the chosen month and saves.</p>
     </div>
   </div>
-
 </div>
 
-<!-- TOTALS -->
 <div class="totals">
   <div class="total-card"><div class="total-label">Total liabilities</div><div class="total-value t-liab" id="total-liab">£0.00</div></div>
   <div class="total-card"><div class="total-label">Total assets</div><div class="total-value t-asset" id="total-asset">£0.00</div></div>
@@ -164,6 +107,11 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
 </div>
 
 <script>
+const SUPA_URL = 'https://vwwtodgmyjktptwvwcdc.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3d3RvZGdteWprdHB0d3Z3Y2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNDQ5OTcsImV4cCI6MjA5MTYyMDk5N30.U21y3lKiwk-I4qqeX3dkPsjwnD32KFZ71rrAf4zoBaU';
+const TABLE = 'finance_2026';
+const RECORD_KEY = 'data_v1';
+
 const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const pre={
   natwest:  [2000.90,1815.96,1815.96,1815.96,null,null,null,null,null,null,null,null],
@@ -174,11 +122,80 @@ const pre={
   recovery: [1400,1500,null,null,null,null,null,null,null,null,null,null],
 };
 
+let saveTimer=null;
+
+function setSync(state,msg){
+  const dot=document.getElementById('sync-dot');
+  document.getElementById('sync-msg').textContent=msg;
+  dot.className='dot '+(state==='ok'?'ok':state==='saving'?'saving':'err');
+}
+
+async function supaFetch(method,body){
+  const url=`${SUPA_URL}/rest/v1/${TABLE}`;
+  const headers={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'};
+  const res=await fetch(method==='GET'?url+'?key=eq.'+RECORD_KEY:url,{method,headers,body:body?JSON.stringify(body):undefined});
+  if(!res.ok)throw new Error(await res.text());
+  return method==='GET'?res.json():true;
+}
+
+async function loadData(){
+  try{
+    setSync('saving','Loading saved data...');
+    const rows=await supaFetch('GET');
+    if(rows&&rows.length>0){
+      const data=JSON.parse(rows[0].value);
+      if(data.carry_fwd!=null)document.getElementById('carry_fwd').value=data.carry_fwd;
+      const keys=['natwest','rentPay','sanket','actual','rentPaid','recovery'];
+      keys.forEach(k=>{
+        if(data[k])months.forEach((_,i)=>{
+          const el=document.getElementById(k+'_'+i);
+          if(el&&data[k][i]!=null)el.value=data[k][i];
+        });
+      });
+      setSync('ok','All data loaded ✓');
+    } else {
+      setSync('ok','No saved data yet — using defaults');
+    }
+    calc();
+  } catch(e){
+    setSync('err','Could not load data: '+e.message);
+  }
+}
+
+function collectData(){
+  const keys=['natwest','rentPay','sanket','actual','rentPaid','recovery'];
+  const out={carry_fwd:parseFloat(document.getElementById('carry_fwd').value)||null};
+  keys.forEach(k=>{
+    out[k]=months.map((_,i)=>{
+      const v=parseFloat(document.getElementById(k+'_'+i)?.value);
+      return isNaN(v)?null:v;
+    });
+  });
+  return out;
+}
+
+async function saveData(){
+  try{
+    setSync('saving','Saving...');
+    const data=collectData();
+    await supaFetch('POST',{key:RECORD_KEY,value:JSON.stringify(data)});
+    setSync('ok','Saved ✓ — '+new Date().toLocaleTimeString());
+  } catch(e){
+    setSync('err','Save failed: '+e.message);
+  }
+}
+
+function scheduleSave(){
+  calc();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveData,1200);
+}
+
 function mkInput(id,val){
   const el=document.createElement('input');
   el.type='number';el.step='0.01';el.id=id;
   if(val!=null)el.value=val;
-  el.oninput=calc;
+  el.oninput=scheduleSave;
   return el;
 }
 function mkTd(child,cls){
@@ -194,17 +211,13 @@ function buildTables(){
   const ab=document.getElementById('asset-body');
   months.forEach((m,i)=>{
     const stripe=i%2===0?'row-odd':'row-even';
-
-    const lr=document.createElement('tr');
-    lr.className=stripe;
+    const lr=document.createElement('tr');lr.className=stripe;
     lr.appendChild(mkTd(m,'month'));
     lr.appendChild(mkTd(mkInput('natwest_'+i,pre.natwest[i])));
     lr.appendChild(mkTd(mkInput('rentPay_'+i,pre.rentPay[i])));
     lr.appendChild(mkTd(mkInput('sanket_'+i,pre.sanket[i])));
     lb.appendChild(lr);
-
-    const ar=document.createElement('tr');
-    ar.className=stripe;
+    const ar=document.createElement('tr');ar.className=stripe;
     ar.appendChild(mkTd(m,'month'));
     ar.appendChild(mkTd(mkInput('actual_'+i,pre.actual[i])));
     ar.appendChild(mkTd(mkInput('rentPaid_'+i,pre.rentPaid[i])));
@@ -251,9 +264,9 @@ function applyToMonth(){
   const ri=document.getElementById('recovery_'+idx);
   if(si)si.value=sanket.toFixed(2);
   if(ri)ri.value=rec.toFixed(2);
-  calc();
+  scheduleSave();
 }
 
 buildTables();
-calc();
+loadData();
 </script>
