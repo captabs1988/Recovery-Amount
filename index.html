@@ -1,0 +1,259 @@
+<h2 class="sr-only">Finance Tracker 2026 — Liabilities, Assets and Cost Calculator</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);padding:1rem}
+h1{font-size:18px;font-weight:500;margin-bottom:1.25rem}
+
+.outer{display:grid;grid-template-columns:1fr 1fr 310px;gap:12px;margin-bottom:12px;align-items:start}
+
+/* Panel wrapper */
+.panel{border:1px solid #aaa;border-radius:6px;overflow:hidden}
+.panel-header{padding:6px 10px;font-size:11px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;color:#fff}
+.liab-header{background:#A32D2D}
+.asset-header{background:#0F6E56}
+.pay-header{background:#185FA5}
+
+/* Excel-style ledger table */
+table.ledger{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+table.ledger col.c-month{width:38px}
+table.ledger col.c-data{width:auto}
+
+table.ledger thead tr{background:#D9D9D9}
+table.ledger thead th{
+  padding:5px 6px;
+  border:1px solid #aaa;
+  font-size:11px;font-weight:600;
+  color:#222;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis
+}
+
+/* Alternating row stripes */
+table.ledger tbody tr.row-odd  td{background:#FFFFFF}
+table.ledger tbody tr.row-even td{background:#F2F2F2}
+
+table.ledger tbody td{
+  border:1px solid #bbb;
+  padding:2px 4px;
+  vertical-align:middle
+}
+table.ledger tbody td.month{
+  font-size:11px;font-weight:600;color:#444;
+  text-align:center;
+  background:#E8E8E8;
+  border-right:1px solid #999
+}
+table.ledger tbody tr.section-row td{
+  background:#E2E2E2;
+  font-size:11px;font-weight:600;
+  color:#333;
+  padding:3px 6px;
+  border:1px solid #aaa
+}
+table.ledger tbody tr.carry-row td{
+  background:#FFF9E6;
+  border:1px solid #bbb
+}
+
+input[type=number]{
+  width:100%;height:24px;font-size:12px;
+  padding:0 4px;
+  border:none;
+  background:transparent;
+  color:var(--color-text-primary);
+  -moz-appearance:textfield;
+  text-align:right
+}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+input[type=number]:focus{outline:1px solid #378ADD;background:#EAF3FB}
+
+/* Payslip panel */
+.pay-body{padding:.65rem .75rem;background:var(--color-background-primary)}
+.pay-field{margin-bottom:.5rem}
+.pay-field label{font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px}
+.pay-field input{border:1px solid #bbb;border-radius:4px;text-align:left;height:26px;background:var(--color-background-secondary)}
+.pay-field input:focus{outline:1px solid #378ADD;background:#EAF3FB}
+.divider{border:none;border-top:1px solid #ccc;margin:.55rem 0}
+.result-row{display:flex;justify-content:space-between;align-items:center;background:#F2F2F2;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin-bottom:.45rem}
+.result-label{font-size:11px;color:#555}
+.result-val{font-size:13px;font-weight:600}
+.rv-blue{color:#185FA5}.rv-red{color:#A32D2D}
+select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-radius:4px;background:var(--color-background-secondary);color:var(--color-text-primary);width:100%}
+.apply-btn{width:100%;height:30px;font-size:12px;font-weight:600;background:#185FA5;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-top:.4rem}
+.apply-btn:hover{background:#0C447C}
+.month-sel-row{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:.6rem}
+.ms-label{font-size:10px;color:#555;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
+.note{font-size:10px;color:#888;margin-top:.35rem;line-height:1.5}
+
+/* Totals */
+.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.total-card{background:#fff;border:1px solid #aaa;border-radius:6px;padding:.65rem 1rem;text-align:center}
+.total-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}
+.total-value{font-size:20px;font-weight:600}
+.t-liab{color:#A32D2D}.t-asset{color:#0F6E56}.t-bal{color:#185FA5}
+</style>
+
+<h1>Year 2026</h1>
+<div class="outer">
+
+  <!-- LIABILITIES -->
+  <div class="panel">
+    <div class="panel-header liab-header">Liabilities</div>
+    <table class="ledger">
+      <colgroup><col class="c-month"><col class="c-data"><col class="c-data"><col class="c-data"></colgroup>
+      <thead><tr><th>Mo.</th><th>Natwest £</th><th>Rent payable £</th><th>Sanket diff £</th></tr></thead>
+      <tbody>
+        <tr class="section-row"><td colspan="4">Carry forward 2025</td></tr>
+        <tr class="carry-row">
+          <td class="month">—</td>
+          <td colspan="3"><input type="number" id="carry_fwd" value="1438.40" step="0.01" oninput="calc()"></td>
+        </tr>
+        <tr class="section-row"><td colspan="4">Monthly</td></tr>
+        <tbody id="liab-body"></tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ASSETS -->
+  <div class="panel">
+    <div class="panel-header asset-header">Assets</div>
+    <table class="ledger">
+      <colgroup><col class="c-month"><col class="c-data"><col class="c-data"><col class="c-data"></colgroup>
+      <thead><tr><th>Mo.</th><th>Actual work done £</th><th>Rent paid £</th><th>Recovery paid £</th></tr></thead>
+      <tbody id="asset-body"></tbody>
+    </table>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div class="panel">
+    <div class="panel-header pay-header">Monthly cost calculator</div>
+    <div class="pay-body">
+      <div class="month-sel-row">
+        <span class="ms-label">Month</span>
+        <select id="pay-month">
+          <option value="">— select —</option>
+          <option>Jan</option><option>Feb</option><option>Mar</option>
+          <option>Apr</option><option>May</option><option>Jun</option>
+          <option>Jul</option><option>Aug</option><option>Sep</option>
+          <option>Oct</option><option>Nov</option><option>Dec</option>
+        </select>
+      </div>
+      <div class="pay-field"><label>Payment £</label><input type="number" id="p_gross" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
+      <div class="pay-field"><label>Deductions £</label><input type="number" id="p_ded" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
+      <div class="pay-field"><label>Employer's national insurance £</label><input type="number" id="p_ni" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
+      <div class="pay-field"><label>Employer pension £</label><input type="number" id="p_pension" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
+      <hr class="divider">
+      <div class="result-row"><span class="result-label">Total cost to employer</span><span class="result-val rv-blue" id="p_total">£0.00</span></div>
+      <div class="pay-field"><label>Total work done £</label><input type="number" id="p_work" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
+      <div class="result-row"><span class="result-label">Sanket formula difference</span><span class="result-val rv-red" id="p_sanket">£0.00</span></div>
+      <hr class="divider">
+      <div class="pay-field"><label>Total recovery paid £</label><input type="number" id="p_recovery" step="0.01" placeholder="0.00"></div>
+      <button class="apply-btn" onclick="applyToMonth()">Apply to selected month ↗</button>
+      <p class="note">Pushes Sanket diff + Recovery paid into the chosen month row.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOTALS -->
+<div class="totals">
+  <div class="total-card"><div class="total-label">Total liabilities</div><div class="total-value t-liab" id="total-liab">£0.00</div></div>
+  <div class="total-card"><div class="total-label">Total assets</div><div class="total-value t-asset" id="total-asset">£0.00</div></div>
+  <div class="total-card"><div class="total-label">Balance (liab − asset)</div><div class="total-value t-bal" id="total-bal">£0.00</div></div>
+</div>
+
+<script>
+const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pre={
+  natwest:  [2000.90,1815.96,1815.96,1815.96,null,null,null,null,null,null,null,null],
+  rentPay:  [400,400,400,400,null,null,null,null,null,null,null,null],
+  sanket:   [778,904,null,null,null,null,null,null,null,null,null,null],
+  actual:   [1680.61,1555.17,887.83,null,null,null,null,null,null,null,null,null],
+  rentPaid: [400,400,400,400,null,null,null,null,null,null,null,null],
+  recovery: [1400,1500,null,null,null,null,null,null,null,null,null,null],
+};
+
+function mkInput(id,val){
+  const el=document.createElement('input');
+  el.type='number';el.step='0.01';el.id=id;
+  if(val!=null)el.value=val;
+  el.oninput=calc;
+  return el;
+}
+function mkTd(child,cls){
+  const td=document.createElement('td');
+  if(cls)td.className=cls;
+  if(child instanceof HTMLElement)td.appendChild(child);
+  else td.textContent=child;
+  return td;
+}
+
+function buildTables(){
+  const lb=document.getElementById('liab-body');
+  const ab=document.getElementById('asset-body');
+  months.forEach((m,i)=>{
+    const stripe=i%2===0?'row-odd':'row-even';
+
+    const lr=document.createElement('tr');
+    lr.className=stripe;
+    lr.appendChild(mkTd(m,'month'));
+    lr.appendChild(mkTd(mkInput('natwest_'+i,pre.natwest[i])));
+    lr.appendChild(mkTd(mkInput('rentPay_'+i,pre.rentPay[i])));
+    lr.appendChild(mkTd(mkInput('sanket_'+i,pre.sanket[i])));
+    lb.appendChild(lr);
+
+    const ar=document.createElement('tr');
+    ar.className=stripe;
+    ar.appendChild(mkTd(m,'month'));
+    ar.appendChild(mkTd(mkInput('actual_'+i,pre.actual[i])));
+    ar.appendChild(mkTd(mkInput('rentPaid_'+i,pre.rentPaid[i])));
+    ar.appendChild(mkTd(mkInput('recovery_'+i,pre.recovery[i])));
+    ab.appendChild(ar);
+  });
+}
+
+function sumKey(key){
+  return months.reduce((s,_,i)=>s+(parseFloat(document.getElementById(key+'_'+i)?.value)||0),0);
+}
+
+function calc(){
+  const carry=parseFloat(document.getElementById('carry_fwd').value)||0;
+  const liab=carry+sumKey('natwest')+sumKey('rentPay')+sumKey('sanket');
+  const asset=sumKey('actual')+sumKey('rentPaid')+sumKey('recovery');
+  const bal=liab-asset;
+  document.getElementById('total-liab').textContent='£'+liab.toFixed(2);
+  document.getElementById('total-asset').textContent='£'+asset.toFixed(2);
+  const be=document.getElementById('total-bal');
+  be.textContent='£'+Math.abs(bal).toFixed(2)+(bal<0?' (surplus)':' (deficit)');
+  be.className='total-value '+(bal<0?'t-asset':'t-liab');
+}
+
+function calcPay(){
+  const g=parseFloat(document.getElementById('p_gross').value)||0;
+  const d=parseFloat(document.getElementById('p_ded').value)||0;
+  const n=parseFloat(document.getElementById('p_ni').value)||0;
+  const p=parseFloat(document.getElementById('p_pension').value)||0;
+  const w=parseFloat(document.getElementById('p_work').value)||0;
+  const total=g+d+n+p;
+  document.getElementById('p_total').textContent='£'+total.toFixed(2);
+  document.getElementById('p_sanket').textContent='£'+Math.max(0,total-w).toFixed(2);
+}
+
+function applyToMonth(){
+  const sel=document.getElementById('pay-month').value;
+  if(!sel){alert('Please select a month.');return;}
+  const idx=months.indexOf(sel);
+  if(idx<0)return;
+  const sanket=parseFloat(document.getElementById('p_sanket').textContent.replace('£',''))||0;
+  const rec=parseFloat(document.getElementById('p_recovery').value)||0;
+  const si=document.getElementById('sanket_'+idx);
+  const ri=document.getElementById('recovery_'+idx);
+  if(si)si.value=sanket.toFixed(2);
+  if(ri)ri.value=rec.toFixed(2);
+  calc();
+}
+
+buildTables();
+calc();
+</script>
