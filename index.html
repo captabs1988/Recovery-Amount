@@ -1,4 +1,4 @@
-<h2 class="sr-only">Finance Tracker 2026 — Liabilities, Assets and Cost Calculator with Supabase sync</h2>
+<h2 class="sr-only">Finance Tracker 2026 with monthly breakdown table below</h2>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);padding:1rem}
@@ -26,7 +26,8 @@ input[type=number]:focus{outline:1px solid #378ADD;background:#EAF3FB}
 .pay-body{padding:.65rem .75rem;background:var(--color-background-primary)}
 .pay-field{margin-bottom:.5rem}
 .pay-field label{font-size:10px;color:var(--color-text-secondary);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.4px}
-.pay-field input{border:1px solid #bbb;border-radius:4px;text-align:left;height:26px;background:var(--color-background-secondary);width:100%}
+.pay-field input{border:1px solid #bbb;border-radius:4px;text-align:left;height:26px;background:var(--color-background-secondary);width:100%;font-size:12px;padding:0 5px;-moz-appearance:textfield}
+.pay-field input::-webkit-inner-spin-button{-webkit-appearance:none}
 .pay-field input:focus{outline:1px solid #378ADD;background:#EAF3FB}
 .divider{border:none;border-top:1px solid #ccc;margin:.55rem 0}
 .result-row{display:flex;justify-content:space-between;align-items:center;background:#F2F2F2;border:1px solid #ccc;border-radius:4px;padding:4px 8px;margin-bottom:.45rem}
@@ -39,11 +40,25 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
 .month-sel-row{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:.6rem}
 .ms-label{font-size:10px;color:#555;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
 .note{font-size:10px;color:#888;margin-top:.35rem;line-height:1.5}
-.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
 .total-card{background:#fff;border:1px solid #aaa;border-radius:6px;padding:.65rem 1rem;text-align:center}
 .total-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}
 .total-value{font-size:20px;font-weight:600}
 .t-liab{color:#A32D2D}.t-asset{color:#0F6E56}.t-bal{color:#185FA5}
+
+/* Monthly breakdown table */
+.breakdown-panel{border:1px solid #aaa;border-radius:6px;overflow:hidden;margin-top:.25rem}
+.breakdown-header{padding:6px 10px;font-size:11px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;color:#fff;background:#444}
+table.breakdown{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+table.breakdown thead tr{background:#D9D9D9}
+table.breakdown thead th{padding:5px 6px;border:1px solid #aaa;font-size:11px;font-weight:600;color:#222;text-align:center}
+table.breakdown tbody tr.row-odd td{background:#FFFFFF}
+table.breakdown tbody tr.row-even td{background:#F2F2F2}
+table.breakdown tbody td{border:1px solid #bbb;padding:3px 6px;vertical-align:middle;text-align:right}
+table.breakdown tbody td.month-col{text-align:center;font-weight:600;color:#444;background:#E8E8E8;border-right:1px solid #999}
+table.breakdown tbody td.empty{color:#bbb;text-align:center}
+table.breakdown tfoot td{border:1px solid #999;padding:4px 6px;font-weight:600;background:#D9D9D9;text-align:right;font-size:12px}
+table.breakdown tfoot td.month-col{text-align:center;background:#C0C0C0}
 </style>
 
 <h1>Year 2026</h1>
@@ -77,7 +92,7 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
     <div class="panel-header pay-header">Monthly cost calculator</div>
     <div class="pay-body">
       <div class="month-sel-row"><span class="ms-label">Month</span>
-        <select id="pay-month">
+        <select id="pay-month" onchange="calcPay()">
           <option value="">— select —</option>
           <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option>
           <option>May</option><option>Jun</option><option>Jul</option><option>Aug</option>
@@ -93,7 +108,7 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
       <div class="pay-field"><label>Total work done £</label><input type="number" id="p_work" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
       <div class="result-row"><span class="result-label">Sanket formula difference</span><span class="result-val rv-red" id="p_sanket">£0.00</span></div>
       <hr class="divider">
-      <div class="pay-field"><label>Total recovery paid £</label><input type="number" id="p_recovery" step="0.01" placeholder="0.00"></div>
+      <div class="pay-field"><label>Total recovery paid £</label><input type="number" id="p_recovery" step="0.01" placeholder="0.00" oninput="calcPay()"></div>
       <button class="apply-btn" onclick="applyToMonth()">Apply to selected month ↗</button>
       <p class="note">Pushes Sanket diff + Recovery paid into the chosen month and saves.</p>
     </div>
@@ -106,11 +121,43 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
   <div class="total-card"><div class="total-label">Balance (liab − asset)</div><div class="total-value t-bal" id="total-bal">£0.00</div></div>
 </div>
 
+<!-- MONTHLY BREAKDOWN TABLE -->
+<div class="breakdown-panel">
+  <div class="breakdown-header">Monthly Cost Calculator — Breakdown</div>
+  <table class="breakdown">
+    <colgroup><col style="width:42px"><col><col><col><col><col><col><col><col></colgroup>
+    <thead>
+      <tr>
+        <th>Mo.</th>
+        <th>Payment £</th>
+        <th>Deductions £</th>
+        <th>Employer NI £</th>
+        <th>Employer Pension £</th>
+        <th>Total Cost £</th>
+        <th>Work Done £</th>
+        <th>Sanket Diff £</th>
+        <th>Recovery Paid £</th>
+      </tr>
+    </thead>
+    <tbody id="breakdown-body"></tbody>
+    <tfoot>
+      <tr id="breakdown-foot">
+        <td class="month-col">Total</td>
+        <td>—</td><td>—</td><td>—</td><td>—</td>
+        <td id="ft-total">£0.00</td>
+        <td id="ft-work">£0.00</td>
+        <td id="ft-sanket">£0.00</td>
+        <td id="ft-recovery">£0.00</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
 <script>
-const SUPA_URL = 'https://vwwtodgmyjktptwvwcdc.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3d3RvZGdteWprdHB0d3Z3Y2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNDQ5OTcsImV4cCI6MjA5MTYyMDk5N30.U21y3lKiwk-I4qqeX3dkPsjwnD32KFZ71rrAf4zoBaU';
-const TABLE = 'finance_2026';
-const RECORD_KEY = 'data_v1';
+const SUPA_URL='https://vwwtodgmyjktptwvwcdc.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3d3RvZGdteWprdHB0d3Z3Y2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNDQ5OTcsImV4cCI6MjA5MTYyMDk5N30.U21y3lKiwk-I4qqeX3dkPsjwnD32KFZ71rrAf4zoBaU';
+const TABLE='finance_2026';
+const RECORD_KEY='data_v1';
 
 const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const pre={
@@ -121,6 +168,10 @@ const pre={
   rentPaid: [400,400,400,400,null,null,null,null,null,null,null,null],
   recovery: [1400,1500,null,null,null,null,null,null,null,null,null,null],
 };
+
+// calculator data per month
+const calcData={};
+months.forEach(m=>{calcData[m]={gross:null,ded:null,ni:null,pension:null,work:null,recovery:null};});
 
 let saveTimer=null;
 
@@ -145,26 +196,36 @@ async function loadData(){
     if(rows&&rows.length>0){
       const data=JSON.parse(rows[0].value);
       if(data.carry_fwd!=null)document.getElementById('carry_fwd').value=data.carry_fwd;
-      const keys=['natwest','rentPay','sanket','actual','rentPaid','recovery'];
-      keys.forEach(k=>{
+      ['natwest','rentPay','sanket','actual','rentPaid','recovery'].forEach(k=>{
         if(data[k])months.forEach((_,i)=>{
           const el=document.getElementById(k+'_'+i);
           if(el&&data[k][i]!=null)el.value=data[k][i];
         });
       });
+      if(data.calcData){
+        months.forEach(m=>{
+          if(data.calcData[m])Object.assign(calcData[m],data.calcData[m]);
+        });
+      }
+      if(data.calcData){
+        months.forEach(m=>{
+          if(data.calcData[m]){
+            Object.assign(calcData[m],data.calcData[m]);
+          }
+        });
+      }
       setSync('ok','All data loaded ✓');
     } else {
       setSync('ok','No saved data yet — using defaults');
     }
     calc();
-  } catch(e){
-    setSync('err','Could not load data: '+e.message);
-  }
+    updateBreakdown();
+  }catch(e){setSync('err','Could not load: '+e.message);}
 }
 
 function collectData(){
   const keys=['natwest','rentPay','sanket','actual','rentPaid','recovery'];
-  const out={carry_fwd:parseFloat(document.getElementById('carry_fwd').value)||null};
+  const out={carry_fwd:parseFloat(document.getElementById('carry_fwd').value)||null,calcData};
   keys.forEach(k=>{
     out[k]=months.map((_,i)=>{
       const v=parseFloat(document.getElementById(k+'_'+i)?.value);
@@ -177,19 +238,12 @@ function collectData(){
 async function saveData(){
   try{
     setSync('saving','Saving...');
-    const data=collectData();
-    await supaFetch('POST',{key:RECORD_KEY,value:JSON.stringify(data)});
+    await supaFetch('POST',{key:RECORD_KEY,value:JSON.stringify(collectData())});
     setSync('ok','Saved ✓ — '+new Date().toLocaleTimeString());
-  } catch(e){
-    setSync('err','Save failed: '+e.message);
-  }
+  }catch(e){setSync('err','Save failed: '+e.message);}
 }
 
-function scheduleSave(){
-  calc();
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(saveData,1200);
-}
+function scheduleSave(){calc();clearTimeout(saveTimer);saveTimer=setTimeout(saveData,1200);}
 
 function mkInput(id,val){
   const el=document.createElement('input');
@@ -242,15 +296,81 @@ function calc(){
   be.className='total-value '+(bal<0?'t-asset':'t-liab');
 }
 
+function fmt(v){return v!=null&&v!==''?'£'+parseFloat(v).toFixed(2):'—';}
+
+function updateBreakdown(){
+  const tbody=document.getElementById('breakdown-body');
+  tbody.innerHTML='';
+  let ftTotal=0,ftWork=0,ftSanket=0,ftRecovery=0;
+  months.forEach((m,i)=>{
+    const d=calcData[m]||{};
+    const g=d.gross!=null?parseFloat(d.gross):null;
+    const ded=d.ded!=null?parseFloat(d.ded):null;
+    const ni=d.ni!=null?parseFloat(d.ni):null;
+    const pen=d.pension!=null?parseFloat(d.pension):null;
+    const w=d.work!=null?parseFloat(d.work):null;
+    const rec=d.recovery!=null?parseFloat(d.recovery):null;
+    const total=(g||0)+(ded||0)+(ni||0)+(pen||0);
+    const sanket=total>0&&w!=null?Math.max(0,total-w):null;
+    const hasAny=g!=null||ded!=null||ni!=null||pen!=null||w!=null||rec!=null;
+
+    if(hasAny){ftTotal+=total;ftWork+=(w||0);ftSanket+=(sanket||0);ftRecovery+=(rec||0);}
+
+    const tr=document.createElement('tr');
+    tr.className=i%2===0?'row-odd':'row-even';
+    // highlight the row if it has data
+    if(hasAny) tr.style.fontWeight='500';
+    tr.appendChild(mkTd(m,'month-col'));
+
+    [fmt(g),fmt(ded),fmt(ni),fmt(pen)].forEach(v=>{
+      const td=document.createElement('td');
+      td.textContent=v;
+      if(v==='—')td.className='empty';
+      tr.appendChild(td);
+    });
+
+    const tdTotal=document.createElement('td');
+    tdTotal.textContent=total>0?'£'+total.toFixed(2):'—';
+    if(total===0)tdTotal.className='empty';
+    else{tdTotal.style.fontWeight='700';tdTotal.style.color='#185FA5';}
+    tr.appendChild(tdTotal);
+
+    [fmt(w),sanket!=null?'£'+sanket.toFixed(2):'—',fmt(rec)].forEach((v,ci)=>{
+      const td=document.createElement('td');
+      td.textContent=v;
+      if(v==='—')td.className='empty';
+      if(ci===1&&v!=='—'){td.style.color='#A32D2D';td.style.fontWeight='600';}
+      if(ci===2&&v!=='—'){td.style.color='#0F6E56';td.style.fontWeight='600';}
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  document.getElementById('ft-total').textContent=ftTotal>0?'£'+ftTotal.toFixed(2):'—';
+  document.getElementById('ft-work').textContent=ftWork>0?'£'+ftWork.toFixed(2):'—';
+  document.getElementById('ft-sanket').textContent=ftSanket>0?'£'+ftSanket.toFixed(2):'—';
+  document.getElementById('ft-recovery').textContent=ftRecovery>0?'£'+ftRecovery.toFixed(2):'—';
+}
+
 function calcPay(){
+  const sel=document.getElementById('pay-month').value;
   const g=parseFloat(document.getElementById('p_gross').value)||0;
   const d=parseFloat(document.getElementById('p_ded').value)||0;
   const n=parseFloat(document.getElementById('p_ni').value)||0;
   const p=parseFloat(document.getElementById('p_pension').value)||0;
   const w=parseFloat(document.getElementById('p_work').value)||0;
+  const rec=parseFloat(document.getElementById('p_recovery').value)||0;
   const total=g+d+n+p;
+  const sanket=Math.max(0,total-w);
   document.getElementById('p_total').textContent='£'+total.toFixed(2);
-  document.getElementById('p_sanket').textContent='£'+Math.max(0,total-w).toFixed(2);
+  document.getElementById('p_sanket').textContent='£'+sanket.toFixed(2);
+
+  if(sel){
+    calcData[sel]={
+      gross:g||null,ded:d||null,ni:n||null,pension:p||null,
+      work:w||null,recovery:rec||null
+    };
+    updateBreakdown();
+  }
 }
 
 function applyToMonth(){
@@ -264,6 +384,8 @@ function applyToMonth(){
   const ri=document.getElementById('recovery_'+idx);
   if(si)si.value=sanket.toFixed(2);
   if(ri)ri.value=rec.toFixed(2);
+  calcData[sel].recovery=rec||null;
+  updateBreakdown();
   scheduleSave();
 }
 
