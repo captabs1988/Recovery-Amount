@@ -536,21 +536,61 @@ function applyImportedRecoveryData(data){
   calc();
   updateBreakdown();
 }
-async function importFinanceSheet(){
-  try{
-    setSync('saving','Importing linked Google Sheet...');
-    setGSheetMsg('Reading linked Google Sheet...');
-    const url=`https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GOOGLE_SHEET_GID}&cacheBust=${Date.now()}`;
-    const res=await fetch(url);
-    if(!res.ok)throw new Error('Google Sheet read failed. Check sharing/access settings.');
-    const rows=parseCSV(await res.text());
-    const data=extractFinanceSheetData(rows);
-    applyImportedRecoveryData(data);
-    await saveData();
-    setGSheetMsg('Imported linked Google Sheet into Recovery Amount panel and saved locally/Supabase ✓');
-  }catch(e){
-    setSync('err','Google Sheet import failed');
-    setGSheetMsg('Import failed: '+e.message,true);
+async function importFinanceSheet(){ // imports data from Apps Script instead of direct Google CSV
+  const endpoint=document.getElementById('gsheet-webapp-url')?.value.trim()||localStorage.getItem(GOOGLE_WEBAPP_URL_KEY)||''; // get saved Web App URL
+
+  if(!endpoint){ // stop if URL box is empty
+    setGSheetMsg('Paste your deployed Apps Script Web App URL first.',true); // show error
+    return; // exit function
+  }
+
+  try{ // try import
+    setSync('saving','Importing from RecoveryPanel sheet...'); // top status
+    setGSheetMsg('Reading RecoveryPanel tab through Apps Script...'); // small status
+
+    const res=await fetch(endpoint+'?action=readRecoveryPanel&cacheBust='+Date.now()); // call Apps Script doGet
+    const json=await res.json(); // convert response to JSON
+
+    if(!json.ok)throw new Error(json.error||'Apps Script returned an error'); // catch script error
+    if(!Array.isArray(json.data))throw new Error('No data array returned from Apps Script'); // validate data
+
+    json.data.forEach(row=>{ // loop each month row from sheet
+      const m=monthNorm(row.Month); // normalize month name
+      const i=months.indexOf(m); // find Jan-Dec index
+      if(i<0)return; // skip invalid rows
+
+      const map={ // sheet header to panel input id prefix
+        Natwest:'natwest',
+        RentPayable:'rentPay',
+        SanketDiff:'sanket',
+        ActualWorkDone:'actual',
+        RentPaid:'rentPaid',
+        RecoveryPaid:'recovery'
+      };
+
+      Object.keys(map).forEach(sheetKey=>{ // loop mapped columns
+        const val=moneyNum(row[sheetKey]); // clean number
+        if(val!=null){ // only apply real values
+          const el=document.getElementById(map[sheetKey]+'_'+i); // find matching input
+          if(el)el.value=val.toFixed(2); // update panel
+        }
+      });
+
+      calcData[m].work=moneyNum(row.WorkDone)??moneyNum(row.ActualWorkDone)??calcData[m].work; // update breakdown work
+      calcData[m].recovery=moneyNum(row.RecoveryPaid)??calcData[m].recovery; // update breakdown recovery
+      calcData[m].gross=moneyNum(row.Payment)??calcData[m].gross; // update payment
+      calcData[m].ded=moneyNum(row.Deductions)??calcData[m].ded; // update deductions
+      calcData[m].ni=moneyNum(row.EmployerNI)??calcData[m].ni; // update employer NI
+      calcData[m].pension=moneyNum(row.EmployerPension)??calcData[m].pension; // update pension
+    });
+
+    calc(); // recalculate totals
+    updateBreakdown(); // refresh breakdown table
+    await saveData(); // save imported data
+    setGSheetMsg('Imported RecoveryPanel tab successfully ✓'); // success message
+  }catch(e){ // if anything fails
+    setSync('err','Google Sheet import failed'); // top error
+    setGSheetMsg('Import failed: '+e.message,true); // detailed error
   }
 }
 function buildRecoveryBackupRows(){
