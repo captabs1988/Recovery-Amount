@@ -46,6 +46,15 @@ select{height:26px;font-size:12px;padding:0 4px;border:1px solid #bbb;border-rad
 .total-value{font-size:20px;font-weight:600}
 .t-liab{color:#A32D2D}.t-asset{color:#0F6E56}.t-bal{color:#185FA5}
 
+.sheet-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-.35rem 0 1rem 0;padding:8px;border:1px solid #ccc;border-radius:6px;background:#FAFAFA}
+.sheet-tools label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.4px}
+.sheet-tools input{height:28px;min-width:280px;flex:1;border:1px solid #bbb;border-radius:4px;background:#fff;color:#222;font-size:12px;padding:0 6px}
+.mini-btn{height:28px;font-size:11px;font-weight:600;border:1px solid #aaa;border-radius:4px;background:#fff;color:#222;padding:0 10px;cursor:pointer}
+.mini-btn.primary{background:#185FA5;color:#fff;border-color:#185FA5}
+.mini-btn.green{background:#0F6E56;color:#fff;border-color:#0F6E56}
+.mini-btn:hover{filter:brightness(.96)}
+.gsheet-msg{font-size:10px;color:#666;width:100%;line-height:1.35}
+
 /* Monthly breakdown table */
 .breakdown-panel{border:1px solid #aaa;border-radius:6px;overflow:hidden;margin-top:.25rem}
 .breakdown-header{padding:6px 10px;font-size:11px;font-weight:500;letter-spacing:.7px;text-transform:uppercase;color:#fff;background:#444}
@@ -63,6 +72,16 @@ table.breakdown tfoot td.month-col{text-align:center;background:#C0C0C0}
 
 <h1>Year 2026</h1>
 <div class="sync-bar"><div class="dot" id="sync-dot"></div><span id="sync-msg">Connecting to database...</span></div>
+
+<div class="sheet-tools" aria-label="Google Sheet recovery backup tools">
+  <label for="gsheet-webapp-url">Apps Script Web App URL</label>
+  <input id="gsheet-webapp-url" type="url" placeholder="Paste Google Apps Script Web App URL for backup writing" oninput="rememberGSheetEndpoint()">
+  <button class="mini-btn primary" type="button" onclick="importFinanceSheet()">Import linked Google Sheet ↙</button>
+  <button class="mini-btn green" type="button" onclick="backupRecoveryPanelToGoogleSheet()">Backup to RecpveryPanelBackUp ↗</button>
+  <button class="mini-btn" type="button" onclick="downloadRecoveryPanelBackup()">Download JSON backup</button>
+  <div class="gsheet-msg" id="gsheet-msg">Linked Sheet ID is saved in this file. Import can read the sheet if it is accessible. Backup to Google Sheet needs a deployed Apps Script Web App URL.</div>
+</div>
+
 
 <div class="outer">
   <div class="panel">
@@ -158,15 +177,19 @@ const SUPA_URL='https://vwwtodgmyjktptwvwcdc.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3d3RvZGdteWprdHB0d3Z3Y2RjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNDQ5OTcsImV4cCI6MjA5MTYyMDk5N30.U21y3lKiwk-I4qqeX3dkPsjwnD32KFZ71rrAf4zoBaU';
 const TABLE='finance_2026';
 const RECORD_KEY='data_v1';
+const GOOGLE_SHEET_ID='1gtE4kci9eYigTw-OCJ-64TFgKOnEyW7u';
+const GOOGLE_SHEET_GID='1757247795';
+const GOOGLE_BACKUP_SHEET_NAME='RecpveryPanelBackUp';
+const GOOGLE_WEBAPP_URL_KEY='recoveryPanel_gsheet_webapp_url';
 
 const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const pre={
   natwest:  [2000.90,1815.96,1815.96,1815.96,null,null,null,null,null,null,null,null],
   rentPay:  [400,400,400,400,null,null,null,null,null,null,null,null],
-  sanket:   [778,904,null,null,null,null,null,null,null,null,null,null],
-  actual:   [1680.61,1555.17,887.83,null,null,null,null,null,null,null,null,null],
+  sanket:   [778.39,903.83,1640,null,null,null,null,null,null,null,null,null],
+  actual:   [1680.61,1555.17,887.83,1636.92,null,null,null,null,null,null,null,null],
   rentPaid: [400,400,400,400,null,null,null,null,null,null,null,null],
-  recovery: [1400,1500,null,null,null,null,null,null,null,null,null,null],
+  recovery: [1400,1500,1400,null,null,null,null,null,null,null,null,null],
 };
 
 // calculator data per month
@@ -406,6 +429,185 @@ function applyToMonth(){
   scheduleSave();
 }
 
+
+function setGSheetMsg(msg,isErr=false){
+  const el=document.getElementById('gsheet-msg');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=isErr?'#A32D2D':'#666';
+}
+
+function rememberGSheetEndpoint(){
+  const url=document.getElementById('gsheet-webapp-url')?.value.trim();
+  if(url)localStorage.setItem(GOOGLE_WEBAPP_URL_KEY,url);
+}
+
+function restoreGSheetEndpoint(){
+  const el=document.getElementById('gsheet-webapp-url');
+  if(!el)return;
+  el.value=localStorage.getItem(GOOGLE_WEBAPP_URL_KEY)||'';
+}
+
+function parseCSV(text){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i],nx=text[i+1];
+    if(q&&ch==='"'&&nx==='"'){cell+='"';i++;continue;}
+    if(ch==='"'){q=!q;continue;}
+    if(!q&&ch===','){row.push(cell);cell='';continue;}
+    if(!q&&(ch==='\n'||ch==='\r')){
+      if(ch==='\r'&&nx==='\n')i++;
+      row.push(cell);rows.push(row);row=[];cell='';continue;
+    }
+    cell+=ch;
+  }
+  if(cell!==''||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+
+function cleanText(v){return String(v??'').replace(/\s+/g,' ').trim();}
+function moneyNum(v){
+  const raw=cleanText(v);
+  if(!raw)return null;
+  const neg=/^\(.*\)$/.test(raw)||raw.startsWith('-');
+  const n=parseFloat(raw.replace(/[^0-9.\-]/g,''));
+  if(isNaN(n))return null;
+  return neg&&n>0?-n:n;
+}
+function monthNorm(v){
+  const key=cleanText(v).slice(0,3).toLowerCase();
+  const map={jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',may:'May',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+  return map[key]||null;
+}
+function findCell(rows,label,minCol=0){
+  const target=label.toLowerCase();
+  for(let r=0;r<rows.length;r++){
+    for(let c=minCol;c<(rows[r]||[]).length;c++){
+      if(cleanText(rows[r][c]).toLowerCase()===target)return {r,c};
+    }
+  }
+  return null;
+}
+function extractMonthValueBlock(rows,label,minCol=0){
+  const hit=findCell(rows,label,minCol);
+  const out={};
+  if(!hit)return out;
+  for(let r=hit.r+1;r<Math.min(rows.length,hit.r+18);r++){
+    const line=rows[r]||[];
+    for(let c=Math.max(0,hit.c-1);c<Math.min(line.length,hit.c+4);c++){
+      const m=monthNorm(line[c]);
+      if(m){
+        const val=moneyNum(line[c+1]);
+        if(val!=null)out[m]=val;
+      }
+    }
+  }
+  return out;
+}
+function extractFinanceSheetData(rows){
+  const y=findCell(rows,'YEAR 2026',0);
+  const minCol=y?Math.max(0,y.c-2):0;
+  const carryHit=findCell(rows,'2025 Carry Fwd',minCol);
+  const out={
+    carry_fwd:carryHit?moneyNum(rows[carryHit.r]?.[carryHit.c+1]):null,
+    natwest:extractMonthValueBlock(rows,'Recvd in Natwest',minCol),
+    actual:extractMonthValueBlock(rows,'Actual Work Done',minCol),
+    rentPay:extractMonthValueBlock(rows,'Rent Payable',minCol),
+    rentPaid:extractMonthValueBlock(rows,'Rent Paid',minCol),
+    sanket:extractMonthValueBlock(rows,'Sanket Formula Difference',minCol),
+    recovery:extractMonthValueBlock(rows,'Total Recovery Paid',minCol)
+  };
+  return out;
+}
+function applyImportedRecoveryData(data){
+  if(data.carry_fwd!=null)document.getElementById('carry_fwd').value=data.carry_fwd;
+  ['natwest','rentPay','sanket','actual','rentPaid','recovery'].forEach(k=>{
+    months.forEach((m,i)=>{
+      if(data[k]&&data[k][m]!=null){
+        const el=document.getElementById(k+'_'+i);
+        if(el)el.value=Number(data[k][m]).toFixed(2);
+      }
+    });
+  });
+  months.forEach((m,i)=>{
+    calcData[m].work=parseFloat(document.getElementById('actual_'+i)?.value)||calcData[m].work||null;
+    calcData[m].recovery=parseFloat(document.getElementById('recovery_'+i)?.value)||calcData[m].recovery||null;
+  });
+  calc();
+  updateBreakdown();
+}
+async function importFinanceSheet(){
+  try{
+    setSync('saving','Importing linked Google Sheet...');
+    setGSheetMsg('Reading linked Google Sheet...');
+    const url=`https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GOOGLE_SHEET_GID}&cacheBust=${Date.now()}`;
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('Google Sheet read failed. Check sharing/access settings.');
+    const rows=parseCSV(await res.text());
+    const data=extractFinanceSheetData(rows);
+    applyImportedRecoveryData(data);
+    await saveData();
+    setGSheetMsg('Imported linked Google Sheet into Recovery Amount panel and saved locally/Supabase ✓');
+  }catch(e){
+    setSync('err','Google Sheet import failed');
+    setGSheetMsg('Import failed: '+e.message,true);
+  }
+}
+function buildRecoveryBackupRows(){
+  const data=collectData();
+  const rows=[['Backed Up At','Month','Natwest','Rent Payable','Sanket Diff','Actual Work Done','Rent Paid','Recovery Paid','Carry Forward','Raw JSON']];
+  const stamp=new Date().toISOString();
+  months.forEach((m,i)=>rows.push([
+    stamp,m,data.natwest[i]??'',data.rentPay[i]??'',data.sanket[i]??'',
+    data.actual[i]??'',data.rentPaid[i]??'',data.recovery[i]??'',
+    i===0?(data.carry_fwd??''):'',i===0?JSON.stringify(data):''
+  ]));
+  return rows;
+}
+async function backupRecoveryPanelToGoogleSheet(){
+  const endpoint=document.getElementById('gsheet-webapp-url')?.value.trim()||localStorage.getItem(GOOGLE_WEBAPP_URL_KEY)||'';
+  if(!endpoint){
+    setGSheetMsg('Paste your deployed Apps Script Web App URL first. It must write to sheet name: '+GOOGLE_BACKUP_SHEET_NAME,true);
+    return;
+  }
+  rememberGSheetEndpoint();
+  const payload={
+    action:'backupRecoveryPanel',
+    spreadsheetId:GOOGLE_SHEET_ID,
+    sheetName:GOOGLE_BACKUP_SHEET_NAME,
+    backedUpAt:new Date().toISOString(),
+    data:collectData(),
+    rows:buildRecoveryBackupRows()
+  };
+  try{
+    setSync('saving','Backing up Recovery panel to Google Sheet...');
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    const txt=await res.text().catch(()=>"");
+    if(!res.ok)throw new Error(txt||('HTTP '+res.status));
+    setSync('ok','Google Sheet backup sent ✓');
+    setGSheetMsg('Backup sent to '+GOOGLE_BACKUP_SHEET_NAME+' ✓');
+  }catch(e){
+    try{
+      await fetch(endpoint,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+      setSync('ok','Google Sheet backup request sent ✓');
+      setGSheetMsg('Backup request sent to Apps Script. If the sheet does not update, check Web App permissions/deployment.');
+    }catch(e2){
+      setSync('err','Google Sheet backup failed');
+      setGSheetMsg('Backup failed: '+e2.message,true);
+    }
+  }
+}
+function downloadRecoveryPanelBackup(){
+  const payload={sheetName:GOOGLE_BACKUP_SHEET_NAME,backedUpAt:new Date().toISOString(),data:collectData(),rows:buildRecoveryBackupRows()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='RecoveryPanelBackUp_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 buildTables();
+restoreGSheetEndpoint();
 loadData();
 </script>
