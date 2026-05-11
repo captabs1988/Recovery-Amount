@@ -77,7 +77,7 @@ table.breakdown tfoot td.month-col{text-align:center;background:#C0C0C0}
   <label for="gsheet-webapp-url">Apps Script Web App URL</label>
   <input id="gsheet-webapp-url" type="url" placeholder="Paste Google Apps Script Web App URL for backup writing" oninput="rememberGSheetEndpoint()">
   <button class="mini-btn primary" type="button" onclick="importFinanceSheet()">Import linked Google Sheet ↙</button>
-  <button class="mini-btn green" type="button" onclick="backupRecoveryPanelToGoogleSheet()">Backup to RecpveryPanelBackUp ↗</button>
+  <button class="mini-btn green" type="button" onclick="backupRecoveryPanelToGoogleSheet()">Backup to RecoveryPanelBackUp ↗</button>
   <button class="mini-btn" type="button" onclick="downloadRecoveryPanelBackup()">Download JSON backup</button>
   <div class="gsheet-msg" id="gsheet-msg">Linked Sheet ID is saved in this file. Import can read the sheet if it is accessible. Backup to Google Sheet needs a deployed Apps Script Web App URL.</div>
 </div>
@@ -179,7 +179,7 @@ const TABLE='finance_2026';
 const RECORD_KEY='data_v1';
 const GOOGLE_SHEET_ID='1gtE4kci9eYigTw-OCJ-64TFgKOnEyW7u';
 const GOOGLE_SHEET_GID='1757247795';
-const GOOGLE_BACKUP_SHEET_NAME='RecpveryPanelBackUp';
+const GOOGLE_BACKUP_SHEET_NAME='RecoveryPanelBackUp';
 const GOOGLE_WEBAPP_URL_KEY='recoveryPanel_gsheet_webapp_url';
 
 const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
